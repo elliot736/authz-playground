@@ -1,0 +1,23 @@
+{
+  "name": "authz-playground",
+  "version": "1.0.0",
+  "description": "Cedar Policy Playground & Linter - A CLI tool and library for working with Cedar authorization policies",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "authz-playground": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.11.0"
+  },
+  "keywords": ["cedar", "authorization", "policy", "linter", "playground"],
+  "license": "MIT"
+}
