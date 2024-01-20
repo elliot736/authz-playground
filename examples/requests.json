@@ -1,0 +1,22 @@
+[
+  {
+    "principal": { "role": "admin", "tenant": "acme", "clearance": "top_secret" },
+    "action": "delete",
+    "resource": { "tenant": "acme", "classification": "public" }
+  },
+  {
+    "principal": { "role": "viewer", "tenant": "acme", "clearance": "none" },
+    "action": "read",
+    "resource": { "tenant": "acme", "classification": "public" }
+  },
+  {
+    "principal": { "role": "editor", "tenant": "acme", "clearance": "secret" },
+    "action": "write",
+    "resource": { "tenant": "acme", "classification": "top_secret" }
+  },
+  {
+    "principal": { "role": "admin", "tenant": "globex", "clearance": "top_secret" },
+    "action": "read",
+    "resource": { "tenant": "acme", "classification": "public" }
+  }
+]

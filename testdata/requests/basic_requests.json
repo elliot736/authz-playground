@@ -1,0 +1,17 @@
+[
+  {
+    "principal": { "role": "admin" },
+    "action": "read",
+    "resource": { "type": "document", "classification": "public" }
+  },
+  {
+    "principal": { "role": "viewer" },
+    "action": "read",
+    "resource": { "type": "document", "classification": "secret" }
+  },
+  {
+    "principal": { "role": "viewer" },
+    "action": "write",
+    "resource": { "type": "document", "classification": "public" }
+  }
+]
