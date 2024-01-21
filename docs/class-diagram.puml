@@ -1,0 +1,154 @@
+@startuml class-diagram
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "parser/lexer" {
+  enum TokenType {
+    PERMIT
+    FORBID
+    WHEN
+    LPAREN
+    RPAREN
+    LBRACE
+    RBRACE
+    DOT
+    COMMA
+    EQ
+    NEQ
+    AND
+    OR
+    IN
+    STRING
+    IDENT
+    SEMICOLON
+    EOF
+  }
+
+  interface Token {
+    type: TokenType
+    value: string
+    line: number
+    column: number
+  }
+
+  Token --> TokenType : type
+}
+
+package "parser/parser" {
+  class Parser <<internal>> {
+    - tokens: Token[]
+    - pos: number
+    + parseAll(): Policy[]
+    - parsePolicy(): Policy
+    - parseConditions(): ConditionGroup
+    - parseComparison(): Comparison
+    - parseExpression(): Expression
+    - current(): Token
+    - advance(): Token
+    - expect(type, description): Token
+    - isAtEnd(): boolean
+    - error(message): Error
+  }
+
+  enum Effect <<type>> {
+    "permit"
+    "forbid"
+  }
+
+  enum LogicalOp <<type>> {
+    "and"
+    "or"
+  }
+
+  enum ComparisonOp <<type>> {
+    "eq"
+    "neq"
+    "in"
+  }
+
+  interface FieldAccess {
+    kind: "field_access"
+    entity: string
+    field: string
+  }
+
+  interface StringLiteral {
+    kind: "string_literal"
+    value: string
+  }
+
+  interface Comparison {
+    left: Expression
+    operator: ComparisonOp
+    right: Expression
+  }
+
+  interface ConditionGroup {
+    conditions: Comparison[]
+    connectors: LogicalOp[]
+  }
+
+  interface Policy {
+    effect: Effect
+    conditions: ConditionGroup
+  }
+
+  Comparison --> ComparisonOp : operator
+  Comparison --> FieldAccess : left / right
+  Comparison --> StringLiteral : left / right
+  ConditionGroup --> LogicalOp : connectors
+  ConditionGroup "1" *-- "0..*" Comparison : conditions
+  Policy --> Effect : effect
+  Policy "1" *-- "1" ConditionGroup : conditions
+  Parser --> Token : tokens
+  Parser ..> Policy : produces
+}
+
+package "evaluator/evaluator" {
+  interface AuthzRequest {
+    principal: Record<string, string>
+    action: string
+    resource: Record<string, string>
+  }
+
+  interface Decision {
+    allowed: boolean
+    matchedPolicy: Policy | null
+    reason: string
+  }
+
+  interface PolicyEvaluation {
+    policy: Policy
+    matched: boolean
+    conditionResults: ConditionResult[]
+  }
+
+  interface ConditionResult {
+    condition: Comparison
+    leftValue: string
+    rightValue: string
+    result: boolean
+  }
+
+  Decision --> Policy : matchedPolicy
+  PolicyEvaluation --> Policy : policy
+  PolicyEvaluation "1" *-- "0..*" ConditionResult : conditionResults
+  ConditionResult --> Comparison : condition
+}
+
+package "linter/linter" {
+  interface LintResult {
+    severity: "error" | "warning" | "info"
+    rule: string
+    message: string
+    policyIndex: number
+  }
+}
+
+note right of Parser
+  Recursive descent parser.
+  Uses tokenize() to get tokens,
+  then produces Policy[] AST.
+end note
+
+@enduml
