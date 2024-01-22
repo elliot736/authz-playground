@@ -1,82 +1,49 @@
-@startuml component-diagram
-skinparam componentStyle rectangle
-skinparam linetype ortho
+@startuml sequence-diagram
+title authz-playground — Evaluation Sequence
 
-package "authz-playground" {
+actor User
+participant "CLI" as cli
+participant "Lexer" as lex
+participant "Parser" as prs
+participant "Evaluator" as eval
+participant "Linter" as lint
+participant "Visualizer" as vis
 
-  component "index.ts" as index
-  component "cli.ts" as cli
+== evaluate command ==
 
-  package "parser" {
-    component "lexer.ts" as lexer
-    component "parser.ts" as parser
-  }
+User -> cli : evaluate --policies p.cedar --request req.json
+cli -> prs : parse(cedarText)
+prs -> lex : tokenize(cedarText)
+lex --> prs : Token[]
+prs --> cli : Policy[]
+cli -> eval : evaluate(policies, request)
+eval -> eval : check forbid policies (deny-overrides)
+eval -> eval : check permit policies
+eval --> cli : Decision { allowed, matchedPolicy, reason }
+cli --> User : print decision
 
-  package "evaluator" {
-    component "evaluator.ts" as evaluator
-  }
+== lint command ==
 
-  package "linter" {
-    component "linter.ts" as linter
-  }
+User -> cli : lint --policies p.cedar
+cli -> prs : parse(cedarText)
+prs --> cli : Policy[]
+cli -> lint : lint(policies)
+lint -> lint : check overly-permissive
+lint -> lint : check no-forbid-policies
+lint -> lint : check unconstrained-action
+lint -> lint : check missing-tenant-check
+lint --> cli : LintResult[]
+cli --> User : print findings
 
-  package "visualizer" {
-    component "visualizer.ts" as visualizer
-  }
-}
+== visualize command ==
 
-actor "User" as user
-
-' Entry point
-index --> cli : runCli(args)
-
-' CLI dispatches to commands
-cli --> parser : parse(input)
-cli --> evaluator : evaluate(policies, request)
-cli --> linter : lint(policies)
-cli --> visualizer : visualize(policies, request)
-
-' Internal module dependencies
-parser --> lexer : tokenize(input)
-evaluator ..> parser : <<imports>>\nPolicy, Expression,\nComparison, ConditionGroup
-linter ..> parser : <<imports>>\nPolicy
-visualizer --> evaluator : evaluate()\nevaluateAll()
-visualizer ..> parser : <<imports>>\nPolicy, Expression, Comparison
-
-' External interaction
-user --> index : CLI invocation
-
-' Data flow notes
-note right of lexer
-  Input: Cedar policy text
-  Output: Token[]
-end note
-
-note right of parser
-  Input: Cedar policy text
-  Output: Policy[]
-  (calls lexer internally)
-end note
-
-note right of evaluator
-  Input: Policy[], AuthzRequest
-  Output: Decision / PolicyEvaluation[]
-  Implements deny-overrides logic
-end note
-
-note right of linter
-  Input: Policy[]
-  Output: LintResult[]
-  Rules: overly-permissive,
-  no-forbid-policies,
-  unconstrained-action,
-  missing-tenant-check
-end note
-
-note right of visualizer
-  Input: Policy[], AuthzRequest
-  Output: text-based decision tree
-  Uses evaluator for evaluation data
-end note
+User -> cli : visualize --policies p.cedar --request req.json
+cli -> prs : parse(cedarText)
+prs --> cli : Policy[]
+cli -> vis : visualize(policies, request)
+vis -> eval : evaluateAll(policies, request)
+eval --> vis : PolicyEvaluation[]
+vis --> cli : decision tree (text)
+cli --> User : print tree
 
 @enduml
