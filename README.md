@@ -42,7 +42,7 @@
 ### Install
 
 ```bash
-npm install -g authz-playground
+npm install -g github:elliot736/authz-playground
 ```
 
 ### Write a policy
