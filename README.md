@@ -4,6 +4,8 @@
 </p>
 
 <p align="center">
+<a href="#why-authz-playground">Why</a> &middot;
+<a href="#features">Features</a> &middot;
 <a href="#quick-start">Quick Start</a> &middot;
 <a href="#commands">Commands</a> &middot;
 <a href="#cedar-syntax-supported-subset">Cedar Syntax</a> &middot;
@@ -15,6 +17,8 @@
 
 ## Table of Contents
 
+- [Why authz-playground](#why-authz-playground)
+- [Features](#features)
 - [Quick Start](#quick-start)
   - [Install](#install)
   - [Write a policy](#write-a-policy)
@@ -34,6 +38,24 @@
 - [Architecture](#architecture)
 - [Development](#development)
 - [License](#license)
+
+---
+
+## Why authz-playground
+
+Authorization logic gets buried in application code, scattered across middleware, route guards, and service layers. When a request is denied, you get a 403 and a shrug. There is no audit trail, no explanation, and no easy way to trace which rule caused the denial. Debugging means reading code paths across multiple files and hoping you find the right `if` statement.
+
+Cedar's approach fixes the model. Declarative policies, evaluated centrally, with clear separation between policy logic and application logic. But spinning up the full Cedar toolchain just to prototype a policy or test a single rule adds unnecessary friction. You need a schema, a build step, entity definitions, and a runtime before you can answer basic questions about your authorization logic.
+
+authz-playground gives you the fast feedback loop that is missing. Write a policy, throw requests at it, and see exactly why something was allowed or denied. The decision tree visualizer shows which policies matched, which conditions passed or failed, and what values were compared. The linter catches common mistakes before they reach production. No setup, no dependencies, no ceremony. Just policy logic and answers.
+
+## Features
+
+- **Hand-written recursive descent parser.** Zero dependencies. Errors report line and column numbers.
+- **Deny-overrides evaluation.** Matches Cedar's semantics. A single `forbid` overrides any number of `permit` policies.
+- **Policy linter.** Catches overly-permissive policies, missing tenant checks, unconstrained actions before they hit production.
+- **Decision tree visualizer.** Shows which policies matched, which conditions passed or failed, and what values were compared.
+- **Zero runtime dependencies.** The entire tool is TypeScript and Node.js built-ins. No CLI framework, no external parser.
 
 ---
 
