@@ -1,20 +1,51 @@
-# authz-playground
+<p align="center">
+<h1 align="center">authz-playground</h1>
+<p align="center">Parse, evaluate, lint, and visualize Cedar authorization policies from the command line.<br/>Fast feedback loop for policy logic. No full Cedar toolchain required.</p>
+</p>
 
-A CLI tool for parsing, evaluating, linting, and visualizing authorization policies written in a subset of [Cedar](https://www.cedarpolicy.com/) — AWS's open-source policy language.
+<p align="center">
+<a href="#quick-start">Quick Start</a> &middot;
+<a href="#commands">Commands</a> &middot;
+<a href="#cedar-syntax-supported-subset">Cedar Syntax</a> &middot;
+<a href="#lint-rules">Lint Rules</a> &middot;
+<a href="#architecture">Architecture</a> &middot;
+<a href="#development">Development</a> &middot;
+<a href="#license">License</a>
+</p>
 
-Built this because I kept running into the same problem: authorization logic buried in application code, scattered across middleware and service layers, impossible to reason about. Cedar's approach — declarative policies, evaluated centrally — is the right model. But spinning up the full Cedar toolchain just to prototype a policy or validate your rules against test requests is friction you don't need.
+## Table of Contents
 
-`authz-playground` gives you a fast feedback loop: write policies, throw requests at them, see exactly why something was allowed or denied.
+- [Quick Start](#quick-start)
+  - [Install](#install)
+  - [Write a policy](#write-a-policy)
+  - [Write test requests](#write-test-requests)
+  - [Evaluate](#evaluate)
+- [Commands](#commands)
+  - [evaluate](#evaluate-1)
+  - [lint](#lint)
+  - [visualize](#visualize)
+- [Cedar Syntax (supported subset)](#cedar-syntax-supported-subset)
+  - [Policies](#policies)
+  - [Conditions](#conditions)
+  - [Evaluation rules](#evaluation-rules)
+  - [Comments](#comments)
+  - [What's not supported](#whats-not-supported)
+- [Lint Rules](#lint-rules)
+- [Architecture](#architecture)
+- [Development](#development)
+- [License](#license)
 
-## Install
+---
+
+## Quick Start
+
+### Install
 
 ```bash
 npm install -g authz-playground
 ```
 
-## Quick start
-
-Write a policy:
+### Write a policy
 
 ```cedar
 // policy.cedar
@@ -25,7 +56,7 @@ forbid(principal, action, resource)
   when { resource.classification == "top_secret" && principal.clearance != "top_secret" };
 ```
 
-Write some test requests:
+### Write test requests
 
 ```json
 [
@@ -37,7 +68,7 @@ Write some test requests:
 ]
 ```
 
-Evaluate:
+### Evaluate
 
 ```bash
 authz-playground evaluate --policy policy.cedar --request requests.json
@@ -50,7 +81,9 @@ authz-playground evaluate --policy policy.cedar --request requests.json
   Resource: {"tenant":"acme","classification":"top_secret"}
 ```
 
-The admin has tenant access, but the `forbid` rule blocks them because their clearance doesn't match. Deny overrides permit — always.
+The admin has tenant access, but the `forbid` rule blocks them because their clearance doesn't match. Deny overrides permit, always.
+
+---
 
 ## Commands
 
@@ -77,7 +110,7 @@ authz-playground lint --policy policy.cedar
 
 ### `visualize`
 
-See the full evaluation trace — which policies matched, which conditions passed or failed, and what values were compared. This is the command you want when a request is denied and you don't know why.
+Full evaluation trace showing which policies matched, which conditions passed or failed, and what values were compared. Use this when a request is denied and you don't know why.
 
 ```bash
 authz-playground visualize --policy policy.cedar --request requests.json
@@ -98,9 +131,11 @@ Authorization Decision: DENY
 
 Both policies matched. The permit said yes, the forbid said no. Forbid wins. No guessing.
 
-## Cedar syntax (supported subset)
+---
 
-This tool implements a practical subset of Cedar — enough to express real authorization logic without the complexity of the full spec.
+## Cedar Syntax (supported subset)
+
+A practical subset of [Cedar](https://www.cedarpolicy.com/), enough to express real authorization logic without the complexity of the full spec.
 
 ### Policies
 
@@ -112,7 +147,7 @@ forbid(principal, action, resource)
   when { <conditions> };
 ```
 
-A policy with no `when` clause matches everything. That's almost always a mistake — the linter will flag it.
+A policy with no `when` clause matches everything. That's almost always a mistake, and the linter will flag it.
 
 ### Conditions
 
@@ -136,11 +171,11 @@ principal.role == "admin" || principal.role == "superadmin"
 
 ### Evaluation rules
 
-1. If **any** `forbid` matches → **deny** (deny overrides, always)
-2. If **any** `permit` matches → **allow**
-3. If **nothing** matches → **deny** (default deny)
+1. If **any** `forbid` matches, **deny** (deny overrides, always)
+2. If **any** `permit` matches, **allow**
+3. If **nothing** matches, **deny** (default deny)
 
-This is the same deny-overrides semantics Cedar uses. Secure by default.
+Same deny-overrides semantics as Cedar. Secure by default.
 
 ### Comments
 
@@ -153,14 +188,18 @@ permit(principal, action, resource); // inline too
 
 Entity hierarchies, typed entity references, `unless` clauses, set operations, IP/decimal extensions, schema validation. This is a playground for reasoning about policy logic, not a production Cedar runtime.
 
-## Lint rules
+---
+
+## Lint Rules
 
 | Rule | Severity | What it catches |
 |------|----------|----------------|
-| `overly-permissive` | error | `permit` with no conditions — permits everything |
+| `overly-permissive` | error | `permit` with no conditions, permits everything |
 | `no-forbid-policies` | warning | Zero `forbid` rules in the entire policy set |
-| `unconstrained-action` | warning | `permit` that never checks `action` — allows read, write, delete, anything |
-| `missing-tenant-check` | info | `permit` with no reference to `tenant` — risky in multi-tenant setups |
+| `unconstrained-action` | warning | `permit` that never checks `action`, allows read, write, delete, anything |
+| `missing-tenant-check` | info | `permit` with no reference to `tenant`, risky in multi-tenant setups |
+
+---
 
 ## Architecture
 
@@ -183,14 +222,16 @@ src/
 
 ![Sequence Diagram](docs/sequence-diagram.png)
 
-Intentional choices:
+Design decisions:
 
 - **Hand-written recursive descent parser.** The Cedar subset grammar is small enough that a parser generator would be overkill. Two clean passes: tokenize, then parse. Errors report line and column numbers.
-- **Separated lexer and parser.** Each stage is independently testable. The token stream is a clean contract between them. Adding a new keyword means adding a token type and a parser rule — nothing else changes.
-- **Zero runtime dependencies.** The whole tool is TypeScript and `node`. No CLI framework, no YAML parser, no external anything. Cedar files are parsed with the custom parser, requests are JSON.
-- **Deny-overrides by design.** Not configurable. If you need permit-overrides semantics you're probably building something that shouldn't be a playground tool.
+- **Separated lexer and parser.** Each stage is independently testable. The token stream is a clean contract between them. Adding a new keyword means adding a token type and a parser rule, nothing else changes.
+- **Zero runtime dependencies.** The whole tool is TypeScript and `node`. No CLI framework, no YAML parser, no external anything. Cedar files are parsed with the custom parser. Requests are JSON.
+- **Deny-overrides by design.** Not configurable. If you need permit-overrides semantics, you're probably building something that shouldn't be a playground tool.
 
 See [docs/adr/](docs/adr/) for the full decision records.
+
+---
 
 ## Development
 
@@ -204,9 +245,9 @@ npm run build
 
 Tests are spec-driven and table-driven throughout. The evaluator alone has 16 test cases covering every combination of permit/forbid/default-deny with various condition types.
 
-## Contributing
+Open an issue before starting work on anything significant. PRs should include tests written before the implementation.
 
-Open an issue before starting work on anything significant. PRs should include tests written before the implementation — that's how this project was built and that's how it should stay.
+---
 
 ## License
 
